@@ -103,7 +103,7 @@ class Grid extends HTMLElement {
         for (let x = 0; x < widget.width; x++) {
             const deltaY = widget.gridY;
             for (let y = 0; y < widget.height; y++) {
-                this.#matrix[deltaX + x][deltaY + y] = 0;
+                this.#matrix[deltaY + y][deltaX + x] = 0;
             }
         }
     }
@@ -116,7 +116,7 @@ class Grid extends HTMLElement {
         for (let x = 0; x < widget.width; x++) {
             const deltaY = widget.gridY;
             for (let y = 0; y < widget.height; y++) {
-                this.#matrix[deltaX + x][deltaY + y] = id;
+                this.#matrix[deltaY + y][deltaX + x] = id;
             }
         }
     }
@@ -126,7 +126,7 @@ class Grid extends HTMLElement {
         const collides = new Set();
         for (let shiftX = 0; shiftX < width; shiftX++) {
             for (let shiftY = 0; shiftY < height; shiftY++) {
-                const id = this.#matrix[x + shiftX][y + shiftY];
+                const id = this.#matrix[y + shiftY][x + shiftX];
                 if (id !== 0) { collides.add(id); }
             }
         }
@@ -134,7 +134,7 @@ class Grid extends HTMLElement {
     }
 
     #shadow;
-
+    /**@type {number} */
     #cellSize;
     get cellSize() {
         return this.#cellSize
@@ -145,6 +145,23 @@ class Grid extends HTMLElement {
         return this.#minHeight;
     }
     set minHeight(value) {
+        if (this.#matrix.length < value) {
+            let i = this.#matrix.length;
+            this.#matrix.length = value;
+            for (; i < this.#matrix.length; i++) {
+                this.#matrix[i] = new Array(this.#minHeight).fill(0);
+            }
+        } else {
+            this.#matrix.length = value;
+        }
+        this.#minWidth = value;
+    }
+
+    #minWidth = 0;
+    get minWidth() {
+        return this.#minWidth;
+    }
+    set minWidth(value) {
         for (const line of this.#matrix) {
             if (line.length < value) {
                 let i = line.length;
@@ -157,23 +174,6 @@ class Grid extends HTMLElement {
             }
         }
         this.#minHeight = value;
-    }
-
-    #minWidth = 0;
-    get minWidth() {
-        return this.#minWidth;
-    }
-    set minWidth(value) {
-        if (this.#matrix.length < value) {
-            let i = this.#matrix.length;
-            this.#matrix.length = value;
-            for (; i < this.#matrix.length; i++) {
-                this.#matrix[i] = new Array(this.#minHeight).fill(0);
-            }
-        } else {
-            this.#matrix.length = value;
-        }
-        this.#minWidth = value;
     }
 
 
@@ -263,97 +263,105 @@ class Widget extends HTMLElement {
 
     #id = 0;
 
-    #affected = /**@type { [Set<Number>, Set<Number>] }*/([new Set(), new Set()]);
+    #affected = /**@type { [Map<number>, Map<number>, Map<number>] }*/([new Map(), new Map(), new Map()]);
     
     /**
      * @param { number } x 
      * @param { number } y
      */
     tryReoreder(x, y){
-        //console.log(this.height + y, this.grid.height);
-        //console.log(this.width + x, this.grid.width);
-        if (this.height + y > this.grid.height) return false;
-        if (this.width + x > this.grid.width) return false;
+        const ids = this.#affected[2];
+        ids.clear();
 
-        const next = this.#affected[1];
-        next.clear();
+        let a;
 
         for (const id of subMatrixElements(this.grid.matrix, x, y, this.width, this.height)) {
             if (id === 0 || id === this.#id) continue;
-            next.add(id);
+            ids.add(id);
         }
 
-        for (const id of next) {
+        const matrix = this.grid.matrix; 
+        const iMax = matrix.length - 1;
+        for (let i = 0; i < iMax; i++) {
+            const line = this.grid.matrix[i];
+            for (let j = 0; j < line.length; j++) {
+                const target = matrix[i][j];
+                if (ids.has(target)) {
+                    const widget = this.grid.getWidget(target);
+                    const shift = widget.shiftY;
+                    const row = i + 1 + shift;
+                    if (row < matrix.length) {
+                        const id = matrix[i + 1 + shift][j]; 
+                        if (id !== 0) {
+                            ids.add(id);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (ids.size === 0) return 0;
+
+        const space = this.grid.height - (y + this.height);
+        let hiegh = Infinity;
+        let low = -Infinity;
+        for (const id of ids) {
             const widget = this.grid.getWidget(id);
-            if (!widget.tryReoreder(widget.gridX, y + this.height)) return false;
+            hiegh = Math.min(hiegh, (widget.gridY));
+            low = Math.max(low, (widget.gridY + widget.height));
         }
-
-        return true;
+        const height = low - hiegh;
+        const shift = (y + this.height) - hiegh;
+        console.log(space, height);
+        console.log(shift);
+        
+        //console.log(this.grid.matrix);
+        //console.log(ids);
+        
+        return space >= height? shift : -1;
     }
 
     /**
      * @param { number } x 
      * @param { number } y
      */
-    performReorder(x, y) {
-        const [current, next] = this.#affected;
+    performReorder(x, y, shift) {
+        const current = this.#affected[0];
+        const next = this.#affected[2];
+        this.#affected[2] = this.#affected[1];
+        this.#affected[1] = next;
 
         for (const id of next) {
             console.log("shift:", id);
             current.delete(id);
 
             const widget = this.grid.getWidget(id);
-            const newY = y + this.height;
-            widget.reorderingY = newY;
-            widget.performReorder(widget.gridX, newY);
+            widget.shiftY = shift;
         }
         for (const id of current) {
             console.log("release:", id);
             const widget = this.grid.getWidget(id);
-            widget.cancelReorder();
+            widget.cancelShift();
         }
 
         this.#affected[0] = next;
         this.#affected[1] = current;
-    }
-    cancelReorder() {
-        const [current] = this.#affected;
-        this.reorderingY = NaN;
-        for (const id of current) {
-            const widget = this.grid.getWidget(id);
-            widget.cancelReorder();
-        }
     }
 
     saveReorder() {
         const [current] = this.#affected;
         for (const id of current) {
             const widget = this.grid.getWidget(id);
+            widget.saveShift()
             this.grid.unbindeWidget(id);
-            
-            if (!isNaN(widget.reorderingY)) {
-                widget.gridY = widget.reorderingY;
-                console.log("Y");
-            }
-            if (!isNaN(widget.reorderingX)) {
-                widget.gridX = widget.reorderingX;
-                console.log("X");
-            }
-            
-            widget.reorderingY = NaN;
-            widget.reorderingX = NaN;
-            
-            widget.x = (widget.gridX) * this.grid.cellSize;
-            widget.y = (widget.gridY) * this.grid.cellSize;
-
-            this.grid.bindeWidget(id);
         }
         current.clear();
     }
 
     reorder(x, y) {
-        if (this.tryReoreder(x, y)) {
-            this.performReorder(x, y);
+        const shift = this.tryReoreder(x, y);
+        if (shift !== -1) {
+            this.performReorder(x, y, shift);
             this.gridX = x;
             this.gridY = y;
         }
@@ -366,30 +374,35 @@ class Widget extends HTMLElement {
         }
     }
 
-    #reorderingX = NaN;
-    set reorderingX(value) {
-        if (isNaN(value) && isNaN(this.#reorderingX)) return;
-        if (value === this.#reorderingX) return;
-        this.#reorderingX = value;
-        this.style.setProperty("--grid-x", 
-            sNaN(value)? (this.#gridX + 1) : (value + 1)
-        );
+    #shiftX = 0;
+    get shiftX() {
+        return this.#shiftX;
     }
-    get reorderingX() {
-        return this.#reorderingX;
+    set shiftX(value) {
+        this.#shiftX = value;
+        this.style.setProperty("--grid-x", this.gridX + 1 + value);
     }
-    /**@type { number } */
-    #reorderingY = NaN;
-    set reorderingY(value) {
-        if (isNaN(value) && isNaN(this.#reorderingY)) return;
-        if (value === this.#reorderingY) return;
-        this.#reorderingY = value; 
-        this.style.setProperty("--grid-y",
-            isNaN(value)? (this.#gridY + 1) : (value + 1)
-        );
+    #shiftY = 0;
+    get shiftY() {
+        return this.#shiftY;
+    }set shiftY(value) {
+        this.style.setProperty("--grid-y", this.gridY + 1 + value);
+        this.#shiftY = value;
     }
-    get reorderingY() {
-        return this.#reorderingY;
+
+    saveShift() {
+        this.grid.unbindeWidget(this.#id);
+        this.gridX += this.shiftX;
+        this.gridY += this.shiftY;
+
+        this.x = (this.gridX) * this.grid.cellSize;
+        this.y = (this.gridY) * this.grid.cellSize;
+
+        this.grid.bindeWidget(this.#id);
+    }
+    cancelShift() {
+        this.shiftX = 0;
+        this.shiftY = 0;
     }
 
 
@@ -555,7 +568,7 @@ function pointerup(e) {
 function* subMatrixElements(source, x, y, width, height) {
     for (let shiftX = 0; shiftX < width; shiftX++) {
         for (let shiftY = 0; shiftY < height; shiftY++) {
-            const id = source[x + shiftX][y + shiftY];
+            const id = source[y + shiftY][x + shiftX];
             yield id;
         }
     }
