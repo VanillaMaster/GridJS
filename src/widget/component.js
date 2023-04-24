@@ -307,14 +307,9 @@ export class Widget extends HTMLElement {
             this.grid.style.setProperty("--shadow-height", `${this.height}`);
             this.grid.style.setProperty("--shadow-width", `${this.width}`);
 
-<<<<<<< HEAD
             this.grid.style.setProperty("--shadow-x", `${this.gridX/* + 1*/}`);
             this.grid.style.setProperty("--shadow-y", `${this.gridY/* + 1*/}`);
             
-=======
-            this.grid.style.setProperty("--shadow-x", `${this.gridX + 1}`);
-            this.grid.style.setProperty("--shadow-y", `${this.gridY + 1}`);
->>>>>>> b64e12185139bd137380d24fe4922b90beb6d8ce
 
             this.setAttribute("float", "");
         } else {
