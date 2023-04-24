@@ -1,6 +1,7 @@
 class Grid extends HTMLElement {
-    static observer = new ResizeObserver(/**@param { Array<ResizeObserverEntry & { target: Grid }> } entries */(entries) => {
-        for (const entry of entries) {
+    static observer = new ResizeObserver((entries) => {
+
+        for (const entry of /**@type {(ResizeObserverEntry & {target: Grid})[]}*/(entries)) {
             const { height, width } = entry.contentRect;
             entry.target.#height = Math.trunc(height / entry.target.#cellSize);
             entry.target.#width = Math.trunc(width / entry.target.#cellSize);
@@ -10,8 +11,8 @@ class Grid extends HTMLElement {
 
             //console.log(entry.target.#matrix);
 
-            entry.target.style.setProperty("--grid-height", entry.target.#height)
-            entry.target.style.setProperty("--grid-width", entry.target.#width)
+            entry.target.style.setProperty("--grid-height", `${entry.target.#height}`)
+            entry.target.style.setProperty("--grid-width", `${entry.target.#width}`)
         }
     });
     static template = (new Range()).createContextualFragment(`<div id="content"><div class="shadow"></div><slot></slot></div>`);
@@ -49,12 +50,12 @@ class Grid extends HTMLElement {
     static get observedAttributes() { return ["cell-size"]; }
 
     /**
-    * @type { {[key: string]: (this: Grid, oldValue: string, newValue: string)} }
+    * @type { {[key: string]: (this: Grid, oldValue: string, newValue: string) => void} }
     */
     static #attributeHandlers = {
         ["cell-size"](oldValue, newValue) {
             this.#cellSize = parseInt(newValue);
-            this.style.setProperty("--cell-size", this.#cellSize);
+            this.style.setProperty("--cell-size", `${this.#cellSize}`);
         }
     }
 
@@ -69,6 +70,12 @@ class Grid extends HTMLElement {
     #matrix = [];
 
     get matrix() {
+        // /**@type { number[][] } */
+        // const copy = new Array(this.matrix.length);
+        // for (let i = 0; i < this.#matrix.length; i++) {
+        //     copy[i] = [...this.#matrix[i]];
+        // }
+        // return copy;
         return this.#matrix;
     }
 
@@ -89,6 +96,9 @@ class Grid extends HTMLElement {
         this.#widgets.set(id, element)
         return id;
     }
+    /**
+     * @param { number } id 
+     */
     unregisterWidget(id) {
         this.unbindeWidget(id);
         this.#widgets.delete(id);
@@ -99,6 +109,7 @@ class Grid extends HTMLElement {
      */
     unbindeWidget(id) {
         const widget = this.#widgets.get(id);
+        if (widget == undefined) throw new Error("invalid id");
         const deltaX = widget.gridX;
         for (let x = 0; x < widget.width; x++) {
             const deltaY = widget.gridY;
@@ -112,6 +123,7 @@ class Grid extends HTMLElement {
      */
     bindeWidget(id) {
         const widget = this.#widgets.get(id);
+        if (widget == undefined) throw new Error("invalid id");
         const deltaX = widget.gridX;
         for (let x = 0; x < widget.width; x++) {
             const deltaY = widget.gridY;
@@ -121,21 +133,9 @@ class Grid extends HTMLElement {
         }
     }
 
-    checkForCollide(x, y, width, height) {
-        /**@type { Set<number> } */
-        const collides = new Set();
-        for (let shiftX = 0; shiftX < width; shiftX++) {
-            for (let shiftY = 0; shiftY < height; shiftY++) {
-                const id = this.#matrix[y + shiftY][x + shiftX];
-                if (id !== 0) { collides.add(id); }
-            }
-        }
-        return collides;
-    }
-
     #shadow;
     /**@type {number} */
-    #cellSize;
+    #cellSize = 0;
     get cellSize() {
         return this.#cellSize
     }
@@ -202,6 +202,11 @@ class Grid extends HTMLElement {
     disconnectedCallback() {
         Grid.observer.unobserve(this)
     }
+    /**
+     * @param { string } name 
+     * @param { string } oldValue 
+     * @param { string } newValue 
+     */
     attributeChangedCallback(name, oldValue, newValue) {
         Grid.#attributeHandlers[name].call(this, oldValue, newValue);
     }
@@ -253,29 +258,59 @@ class Widget extends HTMLElement {
         this.#shadow.adoptedStyleSheets = [Widget.style];
         this.#shadow.append(Widget.template.cloneNode(true));
 
-        this.style.setProperty("--widget-height", this.#height);
-        this.style.setProperty("--widget-width", this.#width);
-
-        this.addEventListener("pointerdown", pointerdown);
+        this.style.setProperty("--widget-height", `${this.#height}`);
+        this.style.setProperty("--widget-width", `${this.#width}`);
     }
 
     #shadow;
 
     #id = 0;
 
-    #affected = /**@type { [Map<number>, Map<number>, Map<number>] }*/([new Map(), new Map(), new Map()]);
+    #affected = /**@type { [Map<Number, Number>, Map<Number, Number>, Map<Number, Number>] }*/([new Map(), new Map(), new Map()]);
     
     /**
-     * @param { number } x 
-     * @param { number } y
+     * @param { number } x__ 
+     * @param { number } y__
      */
-    tryReoreder(x, y){
-        const ids = this.#affected[2];
+    tryReoreder(x__, y__){
+        //const ids = this.#affected[2];
+        const matrix__ = this.grid.matrix.map( line => line.map( num => num == 0? [] : [num] ) );
+        //console.log(matrix__);
+        /**@type { ([number, number])[] } */
+        const coordinates = [];
+        for (let i = 0; i < this.height; i++) {
+            for (let j = 0; j < this.width; j++) {
+                const y_ = y__ + i
+                const x_ = x__ + j;
+                if (matrix__[y_][x_].push(this.#id) > 1) {
+                    coordinates.push([x_, y_]);
+                }
+            }
+        }
+
+        let impossible = false;
+        while (coordinates.length > 0) {
+            const [x, y] = /**@type {(typeof coordinates)[Number]}*/(coordinates.pop());
+            /**@type { number } */
+            const id = /**@type {any}*/(matrix__[y][x].shift());
+            const Y = y + 1;
+            if (Y >= matrix__.length) {
+                impossible = true;
+                break;
+            }
+            if (matrix__[Y][x].push(id) > 1) {
+                coordinates.push([Y, x]);
+            }
+        }
+
+        console.log(impossible);
+        console.log(matrix__);
+
+
+        const ids = new Set();
         ids.clear();
 
-        let a;
-
-        for (const id of subMatrixElements(this.grid.matrix, x, y, this.width, this.height)) {
+        for (const id of subMatrixElements(this.grid.matrix, x__, y__, this.width, this.height)) {
             if (id === 0 || id === this.#id) continue;
             ids.add(id);
         }
@@ -302,7 +337,7 @@ class Widget extends HTMLElement {
 
         if (ids.size === 0) return 0;
 
-        const space = this.grid.height - (y + this.height);
+        const space = this.grid.height - (y__ + this.height);
         let hiegh = Infinity;
         let low = -Infinity;
         for (const id of ids) {
@@ -311,7 +346,7 @@ class Widget extends HTMLElement {
             low = Math.max(low, (widget.gridY + widget.height));
         }
         const height = low - hiegh;
-        const shift = (y + this.height) - hiegh;
+        const shift = (y__ + this.height) - hiegh;
         console.log(space, height);
         console.log(shift);
         
@@ -324,6 +359,7 @@ class Widget extends HTMLElement {
     /**
      * @param { number } x 
      * @param { number } y
+     * @param { number } shift
      */
     performReorder(x, y, shift) {
         const current = this.#affected[0];
@@ -358,6 +394,10 @@ class Widget extends HTMLElement {
         current.clear();
     }
 
+    /**
+     * @param { number } x 
+     * @param { number } y 
+     */
     reorder(x, y) {
         const shift = this.tryReoreder(x, y);
         if (shift !== -1) {
@@ -370,7 +410,8 @@ class Widget extends HTMLElement {
     connectedCallback() {
         if (this.parentElement instanceof Grid) {
             this.#grid = this.parentElement;
-            this.#id = this.#grid.registerWidget(this);
+            this.#id = this.grid.registerWidget(this);
+            this.addEventListener("pointerdown", /**@type { any }*/(pointerdown));
         }
     }
 
@@ -380,13 +421,13 @@ class Widget extends HTMLElement {
     }
     set shiftX(value) {
         this.#shiftX = value;
-        this.style.setProperty("--grid-x", this.gridX + 1 + value);
+        this.style.setProperty("--grid-x", `${this.gridX + 1 + value}`);
     }
     #shiftY = 0;
     get shiftY() {
         return this.#shiftY;
     }set shiftY(value) {
-        this.style.setProperty("--grid-y", this.gridY + 1 + value);
+        this.style.setProperty("--grid-y", `${this.gridY + 1 + value}`);
         this.#shiftY = value;
     }
 
@@ -430,7 +471,7 @@ class Widget extends HTMLElement {
     }
     set gridX(value) {
         if (this.#gridX !== value) {
-            this.style.setProperty("--grid-x", value + 1);
+            this.style.setProperty("--grid-x", `${value + 1}`);
             this.grid.style.setProperty("--shadow-x", `${value + 1}`)
             this.#gridX = value;
         }
@@ -442,7 +483,7 @@ class Widget extends HTMLElement {
     }
     set gridY(value) {
         if (this.#gridY !== value) {
-            this.style.setProperty("--grid-y", value + 1);
+            this.style.setProperty("--grid-y", `${value + 1}`);
             this.grid.style.setProperty("--shadow-y", `${value + 1}`)
             this.#gridY = value;
         }
@@ -454,7 +495,7 @@ class Widget extends HTMLElement {
     }
     set height(value) {
         this.#height = value;
-        this.style.setProperty("--widget-height", value);
+        this.style.setProperty("--widget-height", `${value}`);
     }
 
     #width = 2;
@@ -463,12 +504,13 @@ class Widget extends HTMLElement {
     }
     set width(value) {
         this.#width = value;
-        this.style.setProperty("--widget-width", value);
+        this.style.setProperty("--widget-width", `${value}`);
     }
 
-    /**@type { Grid } */
+    /**@type { Grid | undefined } */
     #grid;
     get grid() {
+        if (this.#grid == undefined) throw new Error("no grid found");
         return this.#grid;
     }
 
@@ -483,11 +525,11 @@ class Widget extends HTMLElement {
         if (value) {
             this.grid.unbindeWidget(this.#id);
 
-            this.#grid.style.setProperty("--shadow-height", this.height);
-            this.#grid.style.setProperty("--shadow-width", this.width);
+            this.grid.style.setProperty("--shadow-height", `${this.height}`);
+            this.grid.style.setProperty("--shadow-width", `${this.width}`);
 
-            this.grid.style.setProperty("--shadow-x", `${this.#gridX + 1}`);
-            this.grid.style.setProperty("--shadow-y", `${this.#gridY + 1}`);
+            this.grid.style.setProperty("--shadow-x", `${this.gridX + 1}`);
+            this.grid.style.setProperty("--shadow-y", `${this.gridY + 1}`);
             
 
             this.setAttribute("float", "");
@@ -515,8 +557,8 @@ function pointerdown(e) {
     if (this.grid.locked) return;
     this.grid.locked = true;
     this.setPointerCapture(e.pointerId)
-    this.addEventListener("pointermove", pointermove)
-    this.addEventListener("pointerup", pointerup, { once: true });
+    this.addEventListener("pointermove", /**@type { any }*/(pointermove))
+    this.addEventListener("pointerup", /**@type { any }*/(pointerup), { once: true });
     this.float = true;
 }
 
@@ -549,7 +591,7 @@ function pointerup(e) {
 
     //console.log(this.grid.matrix);
 
-    this.removeEventListener("pointermove", pointermove);
+    this.removeEventListener("pointermove", /**@type { any }*/(pointermove));
 
     this.float = false;
     this.grid.locked = false;
@@ -563,7 +605,7 @@ function pointerup(e) {
  * @param { number } y 
  * @param { number } width 
  * @param { number } height
- * @returns { Generator<number, void, never> }
+ * @returns { Generator<number, void, void> }
  */
 function* subMatrixElements(source, x, y, width, height) {
     for (let shiftX = 0; shiftX < width; shiftX++) {

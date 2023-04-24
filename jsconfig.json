@@ -1,5 +1,7 @@
 {
     "compilerOptions": {
+        "target": "ES2022",
+        "checkJs": true,
         "strict": true,
         "strictNullChecks": true,
         "noImplicitAny": true
