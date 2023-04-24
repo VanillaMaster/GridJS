@@ -66,19 +66,6 @@ class Grid extends HTMLElement {
         this.#shadow.append(Grid.template.cloneNode(true));
     }
 
-    /**@type {number[][]} */
-    #matrix = [];
-
-    get matrix() {
-        // /**@type { number[][] } */
-        // const copy = new Array(this.matrix.length);
-        // for (let i = 0; i < this.#matrix.length; i++) {
-        //     copy[i] = [...this.#matrix[i]];
-        // }
-        // return copy;
-        return this.#matrix;
-    }
-
     #counter = 1;
     /**@type { Map<number, Widget>} */
     #widgets = new Map();
@@ -87,6 +74,9 @@ class Grid extends HTMLElement {
      */
     getWidget(id) {
         return this.#widgets.get(id);
+    }
+    get widgets(){
+        return this.#widgets;
     }
     /**
      * @param { Widget } element 
@@ -100,37 +90,7 @@ class Grid extends HTMLElement {
      * @param { number } id 
      */
     unregisterWidget(id) {
-        this.unbindeWidget(id);
         this.#widgets.delete(id);
-    }
-
-    /**
-     * @param { number } id 
-     */
-    unbindeWidget(id) {
-        const widget = this.#widgets.get(id);
-        if (widget == undefined) throw new Error("invalid id");
-        const deltaX = widget.gridX;
-        for (let x = 0; x < widget.width; x++) {
-            const deltaY = widget.gridY;
-            for (let y = 0; y < widget.height; y++) {
-                this.#matrix[deltaY + y][deltaX + x] = 0;
-            }
-        }
-    }
-    /**
-     * @param { number } id 
-     */
-    bindeWidget(id) {
-        const widget = this.#widgets.get(id);
-        if (widget == undefined) throw new Error("invalid id");
-        const deltaX = widget.gridX;
-        for (let x = 0; x < widget.width; x++) {
-            const deltaY = widget.gridY;
-            for (let y = 0; y < widget.height; y++) {
-                this.#matrix[deltaY + y][deltaX + x] = id;
-            }
-        }
     }
 
     #shadow;
@@ -145,15 +105,6 @@ class Grid extends HTMLElement {
         return this.#minHeight;
     }
     set minHeight(value) {
-        if (this.#matrix.length < value) {
-            let i = this.#matrix.length;
-            this.#matrix.length = value;
-            for (; i < this.#matrix.length; i++) {
-                this.#matrix[i] = new Array(this.#minHeight).fill(0);
-            }
-        } else {
-            this.#matrix.length = value;
-        }
         this.#minWidth = value;
     }
 
@@ -162,17 +113,6 @@ class Grid extends HTMLElement {
         return this.#minWidth;
     }
     set minWidth(value) {
-        for (const line of this.#matrix) {
-            if (line.length < value) {
-                let i = line.length;
-                line.length = value;
-                for (; i < line.length; i++) {
-                    line[i] = 0;
-                }
-            } else {
-                line.length = value;
-            }
-        }
         this.#minHeight = value;
     }
 
@@ -264,134 +204,154 @@ class Widget extends HTMLElement {
 
     #shadow;
 
-    #id = 0;
+    #id = 0;    
 
-    #affected = /**@type { [Map<Number, Number>, Map<Number, Number>, Map<Number, Number>] }*/([new Map(), new Map(), new Map()]);
-    
+    /**@type { number[] } */
+    #affected = [];
     /**
      * @param { number } x__ 
      * @param { number } y__
-     */
+     * @typedef { {x: number, id: number, delta: number} } xEdge
+     * @typedef { {y: number, id: number, delta: number} } yEdge 
+    */
     tryReoreder(x__, y__){
-        //const ids = this.#affected[2];
-        const matrix__ = this.grid.matrix.map( line => line.map( num => num == 0? [] : [num] ) );
-        //console.log(matrix__);
-        /**@type { ([number, number])[] } */
-        const coordinates = [];
-        for (let i = 0; i < this.height; i++) {
-            for (let j = 0; j < this.width; j++) {
-                const y_ = y__ + i
-                const x_ = x__ + j;
-                if (matrix__[y_][x_].push(this.#id) > 1) {
-                    coordinates.push([x_, y_]);
-                }
-            }
+        while (this.#affected.length > 0) {
+            this.grid.getWidget(/**@type {number}*/ (this.#affected.pop()))?.cancelShift();
+        }
+       /**@type {Map<number,[xEdge, xEdge]>} */
+       const xEdges = new Map();
+       /**@type {Map<number,[yEdge, yEdge]>} */
+       const yEdges = new Map();
+
+       /**@type { xEdge[] } */
+        const Xs = [];
+        {
+            /**@type { [xEdge, xEdge] } */
+            const xEdgesValue = [{
+                x: (x__ * 3) + 1,
+                id: this.#id,
+                delta: 1
+            }, {
+                x: ((x__ + this.width) * 3) - 1,
+                id: this.#id,
+                delta: -1
+            }];
+            xEdges.set(this.#id, xEdgesValue);
+            Array.prototype.push.apply(Xs, xEdgesValue);
         }
 
-        let impossible = false;
-        while (coordinates.length > 0) {
-            const [x, y] = /**@type {(typeof coordinates)[Number]}*/(coordinates.pop());
-            /**@type { number } */
-            const id = /**@type {any}*/(matrix__[y][x].shift());
-            const Y = y + 1;
-            if (Y >= matrix__.length) {
-                impossible = true;
-                break;
-            }
-            if (matrix__[Y][x].push(id) > 1) {
-                coordinates.push([Y, x]);
-            }
+        /**@type { yEdge[] } */
+        const Ys = [];
+        {
+            /**@type { [yEdge, yEdge] } */
+            const yEdgesValue = [{
+                y: (y__ * 3) + 1,
+                id: this.#id,
+                delta: 1
+            }, {
+                y: ((y__ + this.height) * 3) - 1,
+                id: this.#id,
+                delta: -1
+            }];
+            yEdges.set(this.#id, yEdgesValue);
+            Array.prototype.push.apply(Ys, yEdgesValue);
         }
 
-        console.log(impossible);
-        console.log(matrix__);
-
-
-        const ids = new Set();
-        ids.clear();
-
-        for (const id of subMatrixElements(this.grid.matrix, x__, y__, this.width, this.height)) {
-            if (id === 0 || id === this.#id) continue;
-            ids.add(id);
+        const priorities = {
+            [this.#id]: -1
         }
+        
+        for (const [key, value] of this.grid.widgets) {
+            if (key === this.#id) continue
+            priorities[key] = value.gridY;
+            /**@type {[xEdge, xEdge]} */
+            const xEdgesValue = [{
+                x: (value.gridX * 3) + 1,
+                id: key,
+                delta: 1
+            }, {
+                x: ((value.gridX + value.width) * 3) - 1,
+                id: key,
+                delta: -1
+            }];
+            Array.prototype.push.apply(Xs, xEdgesValue);
+            xEdges.set(key, xEdgesValue);
+            /**@type {[yEdge, yEdge]} */
+            const yEdgesValue = [{
+                y: (value.gridY * 3) + 1,
+                id: key,
+                delta: 1
+            }, {
+                y: ((value.gridY + value.height) * 3) - 1,
+                id: key,
+                delta: -1,
+            }];
+            Array.prototype.push.apply(Ys, yEdgesValue);
+            yEdges.set(key, yEdgesValue);
+        }
+        
+        const xIntersections = new Set();
+        const intersections = [];
+        let d = 0;
+        do {
+            if (d > 10) debugger;
+            xIntersections.clear();
+            intersections.length = 0;
 
-        const matrix = this.grid.matrix; 
-        const iMax = matrix.length - 1;
-        for (let i = 0; i < iMax; i++) {
-            const line = this.grid.matrix[i];
-            for (let j = 0; j < line.length; j++) {
-                const target = matrix[i][j];
-                if (ids.has(target)) {
-                    const widget = this.grid.getWidget(target);
-                    const shift = widget.shiftY;
-                    const row = i + 1 + shift;
-                    if (row < matrix.length) {
-                        const id = matrix[i + 1 + shift][j]; 
-                        if (id !== 0) {
-                            ids.add(id);
-                        }
+            //sort
+            Xs.sort((a, b) => a.x - b.x);
+            Ys.sort((a, b) => a.y - b.y);
+    
+            let i = 0, lastId = 0;
+            for (const element of Xs) {
+                i += element.delta;
+                if (i > 1) { xIntersections.add(lastId > element.id? `${element.id}:${lastId}` : `${lastId}:${element.id}`); }
+                if (element.delta == 1) lastId = element.id;
+            }
+            i = 0, lastId = 0;
+            for (const element of Ys) {
+                i += element.delta;
+                if (i > 1) { 
+                    if (xIntersections.has(lastId > element.id? `${element.id}:${lastId}` : `${lastId}:${element.id}`)) {
+                        intersections.push(priorities[lastId] > priorities[element.id]?
+                            [element.id, lastId] :
+                            [lastId, element.id]
+                        );
                     }
                 }
+                if (element.delta == 1) lastId = element.id;
             }
-        }
 
-        if (ids.size === 0) return 0;
+            //console.log(intersections);
 
-        const space = this.grid.height - (y__ + this.height);
-        let hiegh = Infinity;
-        let low = -Infinity;
-        for (const id of ids) {
-            const widget = this.grid.getWidget(id);
-            hiegh = Math.min(hiegh, (widget.gridY));
-            low = Math.max(low, (widget.gridY + widget.height));
-        }
-        const height = low - hiegh;
-        const shift = (y__ + this.height) - hiegh;
-        console.log(space, height);
-        console.log(shift);
+            for (const [keepId, moveId] of intersections) {
+                const keep = yEdges.get(keepId)?.[1];
+                const move = yEdges.get(moveId)?.[0];
+                if (keep == undefined || move == undefined) throw new Error("invalid id's");
+                
+                const deltaY = ((keep.y + 1) - (move.y - 1));
+                //if (deltaY == 0) { debugger }
+                const moveWidget = this.grid.getWidget(moveId);
+                if (moveWidget == undefined) throw new Error("invalid id");
+                moveWidget.shiftY += deltaY / 3;
+                const [e1, e2] = /**@type {[yEdge, yEdge]}*/ (yEdges.get(moveId));
+                e1.y += deltaY;
+                e2.y += deltaY;
+                this.#affected.push(moveId);
+            }
+            d++;
+        } while (intersections.length > 0)
         
-        //console.log(this.grid.matrix);
-        //console.log(ids);
-        
-        return space >= height? shift : -1;
-    }
 
-    /**
-     * @param { number } x 
-     * @param { number } y
-     * @param { number } shift
-     */
-    performReorder(x, y, shift) {
-        const current = this.#affected[0];
-        const next = this.#affected[2];
-        this.#affected[2] = this.#affected[1];
-        this.#affected[1] = next;
-
-        for (const id of next) {
-            console.log("shift:", id);
-            current.delete(id);
-
-            const widget = this.grid.getWidget(id);
-            widget.shiftY = shift;
-        }
-        for (const id of current) {
-            console.log("release:", id);
-            const widget = this.grid.getWidget(id);
-            widget.cancelShift();
-        }
-
-        this.#affected[0] = next;
-        this.#affected[1] = current;
+        //console.log(Xs, Ys);
+        //console.log(intersections);
+        return true;
     }
 
     saveReorder() {
-        const [current] = this.#affected;
-        for (const id of current) {
-            const widget = this.grid.getWidget(id);
-            widget.saveShift()
-            this.grid.unbindeWidget(id);
+        while (this.#affected.length > 0) {
+            this.grid.getWidget(/**@type {number}*/(this.#affected.pop()))?.saveShift();
         }
-        current.clear();
     }
 
     /**
@@ -399,9 +359,7 @@ class Widget extends HTMLElement {
      * @param { number } y 
      */
     reorder(x, y) {
-        const shift = this.tryReoreder(x, y);
-        if (shift !== -1) {
-            this.performReorder(x, y, shift);
+        if (this.tryReoreder(x, y)) {
             this.gridX = x;
             this.gridY = y;
         }
@@ -432,14 +390,16 @@ class Widget extends HTMLElement {
     }
 
     saveShift() {
-        this.grid.unbindeWidget(this.#id);
+        //this.grid.unbindeWidget(this.#id);
         this.gridX += this.shiftX;
         this.gridY += this.shiftY;
 
         this.x = (this.gridX) * this.grid.cellSize;
         this.y = (this.gridY) * this.grid.cellSize;
 
-        this.grid.bindeWidget(this.#id);
+        this.shiftX = 0;
+        this.shiftY = 0;
+       // this.grid.bindeWidget(this.#id);
     }
     cancelShift() {
         this.shiftX = 0;
@@ -523,7 +483,7 @@ class Widget extends HTMLElement {
         this.#float = value;
         this.grid.dataset.edit = `${value}`;
         if (value) {
-            this.grid.unbindeWidget(this.#id);
+            //this.grid.unbindeWidget(this.#id);
 
             this.grid.style.setProperty("--shadow-height", `${this.height}`);
             this.grid.style.setProperty("--shadow-width", `${this.width}`);
@@ -537,7 +497,7 @@ class Widget extends HTMLElement {
 
             this.saveReorder();
 
-            this.grid.bindeWidget(this.#id)
+            //this.grid.bindeWidget(this.#id)
 
             this.x = (this.gridX) * this.grid.cellSize;
             this.y = (this.gridY) * this.grid.cellSize;
