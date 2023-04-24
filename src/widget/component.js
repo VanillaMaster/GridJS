@@ -175,7 +175,9 @@ export class Widget extends HTMLElement {
      * @param { number } y 
      */
     reorder(x, y) {
+        console.time("re");
         if (this.tryReoreder(x, y)) {
+            console.timeEnd("re")
             this.gridX = x;
             this.gridY = y;
         }
@@ -299,25 +301,25 @@ export class Widget extends HTMLElement {
         this.#float = value;
         this.grid.dataset.edit = `${value}`;
         if (value) {
-            //this.grid.unbindeWidget(this.#id);
+            this.x = (this.gridX) * this.grid.cellSize;
+            this.y = (this.gridY) * this.grid.cellSize;
 
             this.grid.style.setProperty("--shadow-height", `${this.height}`);
             this.grid.style.setProperty("--shadow-width", `${this.width}`);
 
+<<<<<<< HEAD
             this.grid.style.setProperty("--shadow-x", `${this.gridX/* + 1*/}`);
             this.grid.style.setProperty("--shadow-y", `${this.gridY/* + 1*/}`);
             
+=======
+            this.grid.style.setProperty("--shadow-x", `${this.gridX + 1}`);
+            this.grid.style.setProperty("--shadow-y", `${this.gridY + 1}`);
+>>>>>>> b64e12185139bd137380d24fe4922b90beb6d8ce
 
             this.setAttribute("float", "");
         } else {
-
             this.saveReorder();
-
-            //this.grid.bindeWidget(this.#id)
-
-            this.x = (this.gridX) * this.grid.cellSize;
-            this.y = (this.gridY) * this.grid.cellSize;
-
+            
             this.removeAttribute("float");
         }
     }
