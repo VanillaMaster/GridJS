@@ -18,11 +18,17 @@ export const style = `
 .shadow {
     background-color: aquamarine;
     
-    grid-row-start: var(--shadow-y, 1);
-    grid-row-end: calc(var(--shadow-y, 1) + var(--shadow-height, 0));
-    grid-column-start: var(--shadow-x, 1);
-    grid-column-end: calc(var(--shadow-x, 1) + var(--shadow-width, 0));
+    height: calc(1px * var(--cell-size) * var(--shadow-height));
+    width: calc(1px * var(--cell-size) * var(--shadow-width));
 
-    display: none;
+    top: calc(1px * var(--cell-size) * var(--shadow-y));
+    left: calc(1px * var(--cell-size) * var(--shadow-x));
+
+    /*grid-row-start: var(--shadow-y, 1);*/
+    /*grid-row-end: calc(var(--shadow-y, 1) + var(--shadow-height, 0));*/
+    /*grid-column-start: var(--shadow-x, 1);*/
+    /*grid-column-end: calc(var(--shadow-x, 1) + var(--shadow-width, 0));*/
+
+    position: absolute;
 }
 `;

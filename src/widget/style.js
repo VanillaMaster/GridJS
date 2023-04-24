@@ -24,9 +24,17 @@ export const style = `
 }
 
 :host(:not([float])) {
-    grid-row-start: var(--grid-y, 1);
-    grid-row-end: calc(var(--grid-y, 1) + var(--widget-height, 1));
-    grid-column-start: var(--grid-x, 1);
-    grid-column-end: calc(var(--grid-x, 1) + var(--widget-width, 1));
+    position: absolute;
+
+    height: calc(1px * var(--cell-size) * var(--widget-height));
+    width: calc(1px * var(--cell-size) * var(--widget-width));
+
+    top: calc(1px * var(--cell-size) * var(--grid-y));
+    left: calc(1px * var(--cell-size) * var(--grid-x));
+
+    /*grid-row-start: var(--grid-y, 1);*/
+    /*grid-row-end: calc(var(--grid-y, 1) + var(--widget-height, 1));*/
+    /*grid-column-start: var(--grid-x, 1);*/
+    /*grid-column-end: calc(var(--grid-x, 1) + var(--widget-width, 1));*/
 }
 `

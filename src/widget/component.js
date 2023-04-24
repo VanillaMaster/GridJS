@@ -195,13 +195,13 @@ export class Widget extends HTMLElement {
     }
     set shiftX(value) {
         this.#shiftX = value;
-        this.style.setProperty("--grid-x", `${this.gridX + 1 + value}`);
+        this.style.setProperty("--grid-x", `${this.gridX/* + 1*/ + value}`);
     }
     #shiftY = 0;
     get shiftY() {
         return this.#shiftY;
     }set shiftY(value) {
-        this.style.setProperty("--grid-y", `${this.gridY + 1 + value}`);
+        this.style.setProperty("--grid-y", `${this.gridY/* + 1*/ + value}`);
         this.#shiftY = value;
     }
 
@@ -247,8 +247,8 @@ export class Widget extends HTMLElement {
     }
     set gridX(value) {
         if (this.#gridX !== value) {
-            this.style.setProperty("--grid-x", `${value + 1}`);
-            this.grid.style.setProperty("--shadow-x", `${value + 1}`)
+            this.style.setProperty("--grid-x", `${value /*+ 1*/}`);
+            this.grid.style.setProperty("--shadow-x", `${value/* + 1*/}`)
             this.#gridX = value;
         }
     }
@@ -259,8 +259,8 @@ export class Widget extends HTMLElement {
     }
     set gridY(value) {
         if (this.#gridY !== value) {
-            this.style.setProperty("--grid-y", `${value + 1}`);
-            this.grid.style.setProperty("--shadow-y", `${value + 1}`)
+            this.style.setProperty("--grid-y", `${value/* + 1*/}`);
+            this.grid.style.setProperty("--shadow-y", `${value/* + 1*/}`)
             this.#gridY = value;
         }
     }
@@ -304,8 +304,8 @@ export class Widget extends HTMLElement {
             this.grid.style.setProperty("--shadow-height", `${this.height}`);
             this.grid.style.setProperty("--shadow-width", `${this.width}`);
 
-            this.grid.style.setProperty("--shadow-x", `${this.gridX + 1}`);
-            this.grid.style.setProperty("--shadow-y", `${this.gridY + 1}`);
+            this.grid.style.setProperty("--shadow-x", `${this.gridX/* + 1*/}`);
+            this.grid.style.setProperty("--shadow-y", `${this.gridY/* + 1*/}`);
             
 
             this.setAttribute("float", "");
