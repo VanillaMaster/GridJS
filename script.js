@@ -1,1 +1,0 @@
-import { Grid, Widget } from "./src/index.js";

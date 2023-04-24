@@ -1,13 +1,8 @@
-export const style = `
+export default `
 #content {
     width: calc(var(--cell-size) * var(--grid-width) * 1px);
     height: calc(var(--cell-size) * var(--grid-height) * 1px);
     position: relative;
-
-    display: grid;
-
-    grid-template-rows: repeat(var(--grid-height, 1), 1fr);
-    grid-template-columns: repeat(var(--grid-width, 1), 1fr);
 }
 :host([data-edit="true"]) .shadow {
     display:block;

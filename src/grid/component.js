@@ -1,4 +1,4 @@
-import { style } from "./style.js";
+import style from "./style.js";
 
 export class Grid extends HTMLElement {
     static observer = new ResizeObserver((entries) => {
@@ -20,7 +20,7 @@ export class Grid extends HTMLElement {
     static template = (new Range()).createContextualFragment(`<div id="content"><div class="shadow"></div><slot></slot></div>`);
     static style = new CSSStyleSheet();
     static {
-        this.style.replace(style);
+        this.style.replace(style)
     }
     static get observedAttributes() { return ["cell-size"]; }
 
