@@ -3,19 +3,39 @@ export default `
     display: block;
     position: absolute;
     pointer-events: none;
+
+    min-height: calc(1px * var(--cell-size));
+    min-width: calc(1px * var(--cell-size));
+
+    transition-duration: var(--widget-transition-duration, 250ms);
+    transition-property: none;
+
+    height: calc(1px * ((var(--cell-size) * var(--widget-height)) + var(--delta-height, 0)));
+    width: calc(1px * ((var(--cell-size) * var(--widget-width)) + var(--delta-width, 0)));
 }
 #body {
     pointer-events: all;
     position: absolute;
     inset: 10px;
 
-    background-color: wheat;
+    background-color: var(--widget-color);
+}
+#handle {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    cursor: nw-resize;
+}
+
+:host(:not([float]):not([edit])) {
+    transition-property: top, left, width, height;
+}
+
+:host(:not(:hover)) #handle {
+    opacity: 0;
 }
 
 :host([float]) {
-    height: calc(1px * var(--cell-size) * var(--widget-height));
-    width: calc(1px * var(--cell-size) * var(--widget-width));
-
     top: var(--y);
     left: var(--x);
 
@@ -23,13 +43,7 @@ export default `
 }
 
 :host(:not([float])) {
-    height: calc(1px * var(--cell-size) * var(--widget-height));
-    width: calc(1px * var(--cell-size) * var(--widget-width));
-
     top: calc(1px * var(--cell-size) * var(--grid-y));
     left: calc(1px * var(--cell-size) * var(--grid-x));
-
-    transition-property: top, left;
-    transition-duration: 250ms;
 }
 `

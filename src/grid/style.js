@@ -4,6 +4,11 @@ export default `
     height: calc(var(--cell-size) * var(--grid-height) * 1px);
     position: relative;
 }
+:host {
+    display: block;
+    touch-action:none;
+    user-select: none;
+}
 :host([data-edit="true"]) .shadow {
     display:block;
 }
@@ -11,18 +16,13 @@ export default `
     display:none;
 }
 .shadow {
-    background-color: aquamarine;
+    background-color: var(--shaodw-color);
     
     height: calc(1px * var(--cell-size) * var(--shadow-height));
     width: calc(1px * var(--cell-size) * var(--shadow-width));
 
     top: calc(1px * var(--cell-size) * var(--shadow-y));
     left: calc(1px * var(--cell-size) * var(--shadow-x));
-
-    /*grid-row-start: var(--shadow-y, 1);*/
-    /*grid-row-end: calc(var(--shadow-y, 1) + var(--shadow-height, 0));*/
-    /*grid-column-start: var(--shadow-x, 1);*/
-    /*grid-column-end: calc(var(--shadow-x, 1) + var(--shadow-width, 0));*/
 
     position: absolute;
 }

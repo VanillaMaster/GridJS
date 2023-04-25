@@ -10,14 +10,16 @@ body {
 }
 
 widget-grid {
-    display: block;
     width: 100%;
     height: 100%;
-
-    touch-action:none;
-    user-select: none;
 }
 
 :not(:defined) {
     display: none;
+}
+
+:root {
+    --shaodw-color: aquamarine;
+    --widget-color: wheat;
+    /*--widget-transition-duration: 250ms;*/
 }

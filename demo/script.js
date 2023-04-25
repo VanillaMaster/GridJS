@@ -1,1 +1,1 @@
-import { Grid, Widget } from "../src/index.js";
+import { Grid, Widget } from "../index.js";
