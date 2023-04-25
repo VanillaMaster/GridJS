@@ -10,11 +10,11 @@ export default `
     transition-duration: var(--widget-transition-duration, 250ms);
     transition-property: none;
 
-    height: calc(1px * ((var(--cell-size) * var(--widget-height)) + var(--delta-height, 0)));
-    width: calc(1px * ((var(--cell-size) * var(--widget-width)) + var(--delta-width, 0)));
+    height: calc(1px * ((var(--cell-size) * var(--height)) + var(--delta-height, 0)));
+    width: calc(1px * ((var(--cell-size) * var(--width)) + var(--delta-width, 0)));
 
-    left: calc(1px * ((var(--cell-size) * var(--grid-x, 0)) + var(--x, 0)));
-    top: calc(1px * ((var(--cell-size) * var(--grid-y, 0)) + var(--y, 0)));
+    left: calc(1px * ((var(--cell-size) * var(--x, 0)) + var(--delta-x, 0)));
+    top: calc(1px * ((var(--cell-size) * var(--y, 0)) + var(--delta-y, 0)));
 }
 #body {
     pointer-events: all;
