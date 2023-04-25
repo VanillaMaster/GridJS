@@ -12,6 +12,9 @@ export default `
 
     height: calc(1px * ((var(--cell-size) * var(--widget-height)) + var(--delta-height, 0)));
     width: calc(1px * ((var(--cell-size) * var(--widget-width)) + var(--delta-width, 0)));
+
+    left: calc(1px * ((var(--cell-size) * var(--grid-x, 0)) + var(--x, 0)));
+    top: calc(1px * ((var(--cell-size) * var(--grid-y, 0)) + var(--y, 0)));
 }
 #body {
     pointer-events: all;
@@ -36,14 +39,10 @@ export default `
 }
 
 :host([float]) {
-    top: var(--y);
-    left: var(--x);
-
     z-index: 1;
 }
 
 :host(:not([float])) {
-    top: calc(1px * var(--cell-size) * var(--grid-y));
-    left: calc(1px * var(--cell-size) * var(--grid-x));
+
 }
 `

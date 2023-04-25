@@ -16,19 +16,20 @@ export class Widget extends HTMLElement {
 
         this.style.setProperty("--widget-height", `${this.#height}`);
         this.style.setProperty("--widget-width", `${this.#width}`);
-        /**@type { HTMLDivElement | null} */
-        const handle = this.#shadow.querySelector("#handle");
+        /**@type { HTMLDivElement } */
+        const handle = /**@type { any }*/(this.#shadow.querySelector("#handle"));
         
-        const f = pointermove_.bind(this)
-        handle?.addEventListener("pointerdown", (e) => {
+        
+        const f = pointermove_handle.bind(this)
+        handle.addEventListener("pointerdown", (e) => {
             e.stopPropagation();
-            handle?.addEventListener("pointermove", f);
+            handle.addEventListener("pointermove", f);
             handle.setPointerCapture(e.pointerId);
             this.resizeing = true;
         });
-        handle?.addEventListener("pointerup", (e)=>{
+        handle.addEventListener("pointerup", (e)=>{
             e.stopPropagation();
-            handle?.removeEventListener("pointermove", f);
+            handle.removeEventListener("pointermove", f);
             handle.releasePointerCapture(e.pointerId);
             this.resizeing = false;
         });
@@ -216,25 +217,6 @@ export class Widget extends HTMLElement {
         }
     }
 
-    /**
-     * @param { number } x 
-     * @param { number } y 
-     */
-    reorder(x, y) {
-        if (this.tryReoreder(x, y, this.width, this.height)) {
-            this.gridX = x;
-            this.gridY = y;
-        }
-    }
-
-    /**
-     * @param { number } w 
-     * @param { number } h 
-     */
-    resize(w, h){
-        
-    }
-
     connectedCallback() {
         if (this.parentElement instanceof Grid) {
             this.#grid = this.parentElement;
@@ -281,9 +263,6 @@ export class Widget extends HTMLElement {
         this.gridX += this.shiftX;
         this.gridY += this.shiftY;
 
-        this.x = (this.gridX) * this.grid.cellSize;
-        this.y = (this.gridY) * this.grid.cellSize;
-
         this.shiftX = 0;
         this.shiftY = 0;
     }
@@ -299,7 +278,7 @@ export class Widget extends HTMLElement {
     }
     set x(value) {
         this.#x = value;
-        this.style.setProperty("--x", `${value}px`);
+        this.style.setProperty("--x", `${value}`);
     }
 
     #y = 0;
@@ -308,7 +287,7 @@ export class Widget extends HTMLElement {
     }
     set y(value) {
         this.#y = value;
-        this.style.setProperty("--y", `${value}px`)
+        this.style.setProperty("--y", `${value}`)
     }
 
     #gridX = 0;
@@ -318,7 +297,6 @@ export class Widget extends HTMLElement {
     set gridX(value) {
         if (this.#gridX !== value) {
             this.style.setProperty("--grid-x", `${value /*+ 1*/}`);
-            this.grid.style.setProperty("--shadow-x", `${value/* + 1*/}`)
             this.#gridX = value;
         }
     }
@@ -330,7 +308,6 @@ export class Widget extends HTMLElement {
     set gridY(value) {
         if (this.#gridY !== value) {
             this.style.setProperty("--grid-y", `${value/* + 1*/}`);
-            this.grid.style.setProperty("--shadow-y", `${value/* + 1*/}`)
             this.#gridY = value;
         }
     }
@@ -395,20 +372,19 @@ export class Widget extends HTMLElement {
         this.#float = value;
         this.grid.dataset.edit = `${value}`;
         if (value) {
-            this.x = (this.gridX) * this.grid.cellSize;
-            this.y = (this.gridY) * this.grid.cellSize;
-
             this.grid.style.setProperty("--shadow-height", `${this.height}`);
             this.grid.style.setProperty("--shadow-width", `${this.width}`);
 
             this.grid.style.setProperty("--shadow-x", `${this.gridX/* + 1*/}`);
             this.grid.style.setProperty("--shadow-y", `${this.gridY/* + 1*/}`);
 
-
             this.setAttribute("float", "");
         } else {
             this.saveReorder();
             this.#reorederCache.clear();
+
+            this.x = 0;
+            this.y = 0;
 
             this.removeAttribute("float");
         }
@@ -435,16 +411,37 @@ function pointerdown(e) {
  * @param {PointerEvent} e 
  */
 function pointermove(e) {
-    this.x += e.movementX;
-    this.y += e.movementY;
-
     const cellSize = this.grid.cellSize;
-    const halfCellSize = cellSize / 2;
-    const x = Math.max(Math.min(Math.trunc((this.x + halfCellSize) / cellSize), this.grid.width - this.width), 0);
-    const y = Math.max(Math.min(Math.trunc((this.y + halfCellSize) / cellSize), this.grid.height - this.height), 0);
+    const half = cellSize / 2;
+    
+    const shiftX = this.x + e.movementX;
+    const shiftY = this.y + e.movementY;
+    
+    const deltaX = Math.trunc( (shiftX + ((shiftX > 0)? half : -half)) / cellSize );
+    const deltaY = Math.trunc( (shiftY + ((shiftY > 0)? half : -half)) / cellSize );
 
-    if (this.gridX !== x || this.gridY !== y) { this.reorder(x, y); }
+    const newX = Math.min(Math.max(this.gridX + deltaX, 0), this.grid.width - this.width);
+    const newY = Math.min(Math.max(this.gridY + deltaY, 0), this.grid.height - this.height);
 
+    const x = this.gridX != newX;
+    const y = this.gridY != newY;
+
+    if (
+        (x || y) &&
+        this.tryReoreder(newX, newY, this.width, this.height)
+    ) {
+        this.x = shiftX + ((this.gridX - newX) * cellSize);
+        this.y = shiftY + ((this.gridY - newY) * cellSize);
+        
+        this.gridX = newX;
+        this.gridY = newY;
+
+        if (y) this.grid.style.setProperty("--shadow-y", `${this.gridY}`)
+        if (x) this.grid.style.setProperty("--shadow-x", `${this.gridX}`)
+    } else {
+        this.x = shiftX;
+        this.y = shiftY;
+    }
 }
 
 /**
@@ -466,7 +463,7 @@ function pointerup(e) {
  * @this { Widget }
  * @param {PointerEvent} e 
  */
-function pointermove_(e) {
+function pointermove_handle(e) {
     const cellSize = this.grid.cellSize;
     const half = cellSize / 2;
     
@@ -479,8 +476,11 @@ function pointermove_(e) {
     const newWidth = Math.min(Math.max(this.width + deltaWidth, 1), this.grid.width - this.gridX);
     const newHeight = Math.min(Math.max(this.height + deltaHeight, 1), this.grid.height - this.gridY);
 
+    const h = this.height != newHeight;
+    const w = this.width != newWidth;
+
     if (
-        (this.height != newHeight || this.width != newWidth) &&
+        (h || w) &&
         this.tryReoreder(this.gridX, this.gridY, newWidth, newHeight)
     ) {
         this.deltaHeight = shiftHeight + ((this.height - newHeight) * cellSize);
@@ -489,8 +489,8 @@ function pointermove_(e) {
         this.height = newHeight;
         this.width = newWidth;
 
-        this.grid.style.setProperty("--shadow-height", `${this.height}`);
-        this.grid.style.setProperty("--shadow-width", `${this.width}`);
+        if (h) this.grid.style.setProperty("--shadow-height", `${this.height}`);
+        if (w) this.grid.style.setProperty("--shadow-width", `${this.width}`);
     } else {
         this.deltaHeight = shiftHeight;
         this.deltaWidth = shiftWidth;
