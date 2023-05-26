@@ -28,6 +28,7 @@ export default `
     right: 10px;
     bottom: 10px;
     cursor: nw-resize;
+    z-index: 99;
 }
 
 :host(:not([float]):not([edit])) {

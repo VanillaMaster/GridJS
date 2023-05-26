@@ -234,10 +234,9 @@ export class Widget extends HTMLElement {
         if (this.parentElement instanceof Grid) {
             this.#grid = this.parentElement;
             this.#id = this.grid.registerWidget(this);
-            this.addEventListener("pointerdown", /**@type { any }*/(pointerdown));
+            this.addEventListener("pointerdown", /**@type { any }*/(pointerdown), {passive: true});
         }
     }
-
     disconnectedCallback(){
         this.grid.unregisterWidget(this.#id);
     }
@@ -401,6 +400,7 @@ customElements.define("widget-container", Widget);
  * @param {PointerEvent} e 
  */
 function pointerdown(e) {
+    if (e.button !== 0) return;
     if (this.grid.locked) return;
     this.grid.locked = true;
     this.setPointerCapture(e.pointerId)
